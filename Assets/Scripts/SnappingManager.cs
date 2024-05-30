@@ -368,6 +368,7 @@ public class SnappingManager : MonoBehaviour
         //atan2((Va x Vb) . Vn, Va . Vb)
         Vector3 crossPro2 = Vector3.Cross(directInit2, direction2);
         float angleToRotate2 = Mathf.Atan2(Vector3.Dot(crossPro2, project2.transform.forward), Vector3.Dot(directInit2, direction2)) * Mathf.Rad2Deg;
+        
         project2.transform.Rotate(0, 0, angleToRotate2);
         project2t.transform.eulerAngles = new Vector3(project2t.transform.eulerAngles.x, project2t.transform.eulerAngles.y, project2.transform.eulerAngles.z);
 
@@ -380,10 +381,10 @@ public class SnappingManager : MonoBehaviour
         cube1.transform.Translate(translation, Space.World);
         cube1.transform.rotation = rotation2 * cube1.transform.rotation;
 
-        Destroy(project1);
-        Destroy(project1t);
-        Destroy(project2);
-        Destroy(project2t);
+        // Destroy(project1);
+        // Destroy(project1t);
+        // Destroy(project2);
+        // Destroy(project2t);
         //cube1.transform.Rotate(rotation2);
 
     }
