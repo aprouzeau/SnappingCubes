@@ -19,21 +19,172 @@ public class SnappingManager : MonoBehaviour
 
     IDictionary<pairPoint, float> pointsToMatch = new Dictionary<pairPoint, float>();
 
+    int countOfTest = 0;
+    [SerializeField]
+    int TotalTrial;
+    bool testDone = false;
+
+    [SerializeField]
+    string Cube1Pos;
+
+    [SerializeField]
+    string Cube1Rot;
+
+    [SerializeField]
+    string Cube2Pos;
+
+    [SerializeField]
+    string Cube2Rot;
+
 
 
     // Start is called before the first frame update
     void Start()
     {
-        getClosestThreePoints2();
-        getTransform();
+
+        System.Threading.Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo( "en-US" );
+
+        System.Threading.Thread.CurrentThread.CurrentUICulture = new System.Globalization.CultureInfo( "en-US" );
+
+        // Generate random positions within a 1x1x1 meter cube
+        string[] cube1PosArr= Cube1Pos.Split(',');
+        string[] cube1RotArr= Cube1Rot.Split(',');
+        cube1.transform.position = new Vector3(float.Parse(cube1PosArr[0].Trim()), float.Parse(cube1PosArr[1].Trim()), float.Parse(cube1PosArr[2]));
+        cube1.transform.eulerAngles = new Vector3(float.Parse(cube1RotArr[0]), float.Parse(cube1RotArr[1]), float.Parse(cube1RotArr[2]));
+
+        string[] cube2PosArr= Cube2Pos.Split(',');
+        string[] cube2RotArr= Cube2Rot.Split(',');
+        cube2.transform.position = new Vector3(float.Parse(cube2PosArr[0]), float.Parse(cube2PosArr[1]), float.Parse(cube2PosArr[2]));
+        cube2.transform.eulerAngles = new Vector3(float.Parse(cube2RotArr[0]), float.Parse(cube2RotArr[1]), float.Parse(cube2RotArr[2]));
+        
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+        if(Input.GetKeyDown(KeyCode.M)){
+            testMultiple();
+        }
+
+        if(Input.GetKeyDown(KeyCode.T)){
+            testOne();
+        }
     }
 
+    void testOne(){
+
+        string[] cube1PosArr= Cube1Pos.Split(',');
+        string[] cube1RotArr= Cube1Rot.Split(',');
+        cube1.transform.position = new Vector3(float.Parse(cube1PosArr[0].Trim()), float.Parse(cube1PosArr[1].Trim()), float.Parse(cube1PosArr[2]));
+        cube1.transform.eulerAngles = new Vector3(float.Parse(cube1RotArr[0]), float.Parse(cube1RotArr[1]), float.Parse(cube1RotArr[2]));
+
+        string[] cube2PosArr= Cube2Pos.Split(',');
+        string[] cube2RotArr= Cube2Rot.Split(',');
+        cube2.transform.position = new Vector3(float.Parse(cube2PosArr[0]), float.Parse(cube2PosArr[1]), float.Parse(cube2PosArr[2]));
+        cube2.transform.eulerAngles = new Vector3(float.Parse(cube2RotArr[0]), float.Parse(cube2RotArr[1]), float.Parse(cube2RotArr[2]));
+
+        Vector3 euler1 = cube1.transform.eulerAngles;
+        Vector3 euler2 = cube2.transform.eulerAngles;
+        Vector3 randomPosition1 = cube1.transform.position;
+        Vector3 randomPosition2 = cube2.transform.position;
+        getClosestThreePoints2();
+        getTransform();
+        if(!areCubeAligned()){
+            Debug.Log("Cube1");
+            Debug.Log("Pos: "+randomPosition1);
+            Debug.Log("Rot: "+euler1);
+            Debug.Log("Cube2");
+            Debug.Log("Pos: "+randomPosition2);
+            Debug.Log("Rot: "+euler2);
+        }
+        pointsToMatch.Clear();
+    }
+
+    void testMultiple()
+    {
+        Debug.Log("Test starting.");
+        while (countOfTest < TotalTrial){
+            //Debug.Log("Test " + countOfTest);
+            Vector3 randomPosition1 = new Vector3(UnityEngine.Random.Range(0f, 10f), UnityEngine.Random.Range(0f, 10f), UnityEngine.Random.Range(0f, 10f));
+            Vector3 randomPosition2 = new Vector3(UnityEngine.Random.Range(0f, 10f), UnityEngine.Random.Range(0f, 10f), UnityEngine.Random.Range(0f, 10f));
+
+            // Generate random rotations
+            Quaternion randomRotation1 = UnityEngine.Random.rotation;
+            Quaternion randomRotation2 = UnityEngine.Random.rotation;
+
+            // Apply random positions and rotations to the game objects
+            cube1.transform.position = randomPosition1;
+            cube1.transform.rotation = randomRotation1;
+            Vector3 euler1 = cube1.transform.eulerAngles;
+
+            cube2.transform.position = randomPosition2;
+            cube2.transform.rotation = randomRotation2;
+            Vector3 euler2 = cube2.transform.eulerAngles;
+
+            getClosestThreePoints2();
+            getTransform();
+
+            if(!areCubeAligned()){
+                Debug.Log("Cube1");
+                Debug.Log("Pos: "+randomPosition1);
+                Debug.Log("Rot: "+euler1);
+                Debug.Log("Cube2");
+                Debug.Log("Pos: "+randomPosition2);
+                Debug.Log("Rot: "+euler2);
+            }
+
+            pointsToMatch.Clear();
+            countOfTest ++;
+        }
+        Debug.Log("Test done.");
+    }
+
+    bool areCubeAligned(){
+
+        float epsilon = 0.005f;
+        Mesh mesh1 = cube1.GetComponent<MeshFilter>().mesh;
+        Vector3[] verticesLoc1 = GetUniqueVertices(mesh1);
+
+        Vector3[] verticesGlo1 = new Vector3[verticesLoc1.Length];
+        for (var i = 0; i < verticesGlo1.Length; i++)
+        {
+            verticesGlo1[i] = cube1.transform.TransformPoint(verticesLoc1[i]);
+            
+        }
+
+        Mesh mesh2 = cube2.GetComponent<MeshFilter>().mesh;
+        Vector3[] verticesLoc2 = GetUniqueVertices(mesh2);
+
+        Vector3[] verticesGlo2 = new Vector3[verticesLoc2.Length];
+        for (var i = 0; i < verticesGlo2.Length; i++)
+        {
+            verticesGlo2[i] = cube2.transform.TransformPoint(verticesLoc2[i]);
+        }
+
+        int nbSimilarVertices = 0;
+
+        for (var i = 0; i < verticesGlo1.Length; i++){
+            for (var j = 0; j < verticesGlo2.Length; j++){
+                float dist = Vector3.Distance(verticesGlo1[i], verticesGlo2[j]);
+                if(dist<epsilon){
+                    // GameObject sphere1 = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    // sphere1.name = "SphereDebug"; 
+                    // sphere1.transform.position = verticesGlo1[i];
+                    // sphere1.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
+                    nbSimilarVertices++;
+                }
+            }
+        }
+
+        if(nbSimilarVertices != 4){
+            Debug.Log("Oh Shit it is not aligned: "+nbSimilarVertices);
+            
+            return false;
+        }
+
+        return true;
+
+    }
     
 
     void getClosestThreePoints2()
@@ -42,7 +193,7 @@ public class SnappingManager : MonoBehaviour
 
         // Get arrays of vertices that are unique
         Mesh mesh1 = cube1.GetComponent<MeshFilter>().mesh;
-        Vector3[] verticesLoc1 = mesh1.vertices;
+        Vector3[] verticesLoc1 = GetUniqueVertices(mesh1);
 
         Vector3[] verticesGlo1 = new Vector3[verticesLoc1.Length];
         for (var i = 0; i < verticesGlo1.Length; i++)
@@ -51,7 +202,7 @@ public class SnappingManager : MonoBehaviour
         }
 
         Mesh mesh2 = cube2.GetComponent<MeshFilter>().mesh;
-        Vector3[] verticesLoc2 = mesh2.vertices;
+        Vector3[] verticesLoc2 = GetUniqueVertices(mesh2);
 
         Vector3[] verticesGlo2 = new Vector3[verticesLoc2.Length];
         for (var i = 0; i < verticesGlo2.Length; i++)
@@ -229,7 +380,10 @@ public class SnappingManager : MonoBehaviour
         cube1.transform.Translate(translation, Space.World);
         cube1.transform.rotation = rotation2 * cube1.transform.rotation;
 
-
+        Destroy(project1);
+        Destroy(project1t);
+        Destroy(project2);
+        Destroy(project2t);
         //cube1.transform.Rotate(rotation2);
 
     }
@@ -281,6 +435,18 @@ public class SnappingManager : MonoBehaviour
         }
         return pFound;
 
+    }
+
+    public static Vector3[] GetUniqueVertices(Mesh mesh)
+    {
+        // Retrieve the vertices from the mesh
+        Vector3[] vertices = mesh.vertices;
+
+        // Use a HashSet to store unique vertices
+        HashSet<Vector3> uniqueVertices = new HashSet<Vector3>(vertices);
+
+        // Convert the HashSet back to an array and return
+        return new List<Vector3>(uniqueVertices).ToArray();
     }
 }
 
