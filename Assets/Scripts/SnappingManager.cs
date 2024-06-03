@@ -15,9 +15,11 @@ public class SnappingManager : MonoBehaviour
         public Vector3 pointC1;
         public Vector3 pointC2;
         public Color c;
+        public float distance;
     }
 
     IDictionary<pairPoint, float> pointsToMatch = new Dictionary<pairPoint, float>();
+    List<pairPoint> pointsToMatchList = new List<pairPoint>();
 
     int countOfTest = 0;
     [SerializeField]
@@ -35,6 +37,9 @@ public class SnappingManager : MonoBehaviour
 
     [SerializeField]
     string Cube2Rot;
+
+    [SerializeField]
+    bool prodCode;
 
 
 
@@ -87,8 +92,8 @@ public class SnappingManager : MonoBehaviour
         Vector3 euler2 = cube2.transform.eulerAngles;
         Vector3 randomPosition1 = cube1.transform.position;
         Vector3 randomPosition2 = cube2.transform.position;
-        getClosestThreePoints2();
-        getTransform();
+        getClosestThreePoints2(prodCode);
+        getTransform(prodCode);
         if(!areCubeAligned()){
             Debug.Log("Cube1");
             Debug.Log("Pos: "+randomPosition1);
@@ -103,6 +108,7 @@ public class SnappingManager : MonoBehaviour
     void testMultiple()
     {
         Debug.Log("Test starting.");
+        int numberFail = 0;
         while (countOfTest < TotalTrial){
             //Debug.Log("Test " + countOfTest);
             Vector3 randomPosition1 = new Vector3(UnityEngine.Random.Range(0f, 10f), UnityEngine.Random.Range(0f, 10f), UnityEngine.Random.Range(0f, 10f));
@@ -121,8 +127,8 @@ public class SnappingManager : MonoBehaviour
             cube2.transform.rotation = randomRotation2;
             Vector3 euler2 = cube2.transform.eulerAngles;
 
-            getClosestThreePoints2();
-            getTransform();
+            getClosestThreePoints2(prodCode);
+            getTransform(prodCode);
 
             if(!areCubeAligned()){
                 Debug.Log("Cube1");
@@ -131,17 +137,21 @@ public class SnappingManager : MonoBehaviour
                 Debug.Log("Cube2");
                 Debug.Log("Pos: "+randomPosition2);
                 Debug.Log("Rot: "+euler2);
+                numberFail ++;
             }
 
             pointsToMatch.Clear();
             countOfTest ++;
         }
+
+        
         Debug.Log("Test done.");
+        Debug.Log("Test failed:" + numberFail);
     }
 
     bool areCubeAligned(){
 
-        float epsilon = 0.005f;
+        float epsilon = 0.05f;
         Mesh mesh1 = cube1.GetComponent<MeshFilter>().mesh;
         Vector3[] verticesLoc1 = GetUniqueVertices(mesh1);
 
@@ -187,7 +197,7 @@ public class SnappingManager : MonoBehaviour
     }
     
 
-    void getClosestThreePoints2()
+    void getClosestThreePoints2(bool prod)
     {
         IDictionary<pairPoint, float> DicoOfDistance = new Dictionary<pairPoint, float>();
 
@@ -213,6 +223,8 @@ public class SnappingManager : MonoBehaviour
         Vector3[] vertices1 = verticesGlo1.Distinct().ToArray();
         Vector3[] vertices2 = verticesGlo2.Distinct().ToArray();
 
+        List<pairPoint> pairs = new List<pairPoint>();
+
         for (var i = 0; i < vertices1.Length; i++)
         {
             // vertices[i] += Vector3.up * Time.deltaTime;
@@ -223,12 +235,21 @@ public class SnappingManager : MonoBehaviour
                 pairPoint temp = new pairPoint();
                 temp.pointC1 = pointToCompare;
                 temp.pointC2 = vertices2[j];
+                temp.distance = distanceTemp;
+                pairs.Add(temp);
                 DicoOfDistance[temp] = distanceTemp;
             }
             
         }
 
-        pairPoint p1 = getMinInDict(DicoOfDistance);
+        pairs.Sort((a, b) => a.distance.CompareTo(b.distance));
+
+        pointsToMatchList = FindOptimalPairs(pairs, vertices1.Length, vertices2.Length);
+
+        //Debug.Log("List Valid: " + IsValidSolution(pointsToMatchList));
+
+
+        /* pairPoint p1 = getMinInDict(DicoOfDistance);
         p1.c = Color.red;
         pointsToMatch[p1] = DicoOfDistance[p1];
         DicoOfDistance.Remove(p1);
@@ -241,13 +262,15 @@ public class SnappingManager : MonoBehaviour
         pairPoint p3 = findMinNotUsed(DicoOfDistance);
         p3.c = Color.green;
         pointsToMatch[p3] = DicoOfDistance[p3];
-        DicoOfDistance.Remove(p3);
+        DicoOfDistance.Remove(p3);*/
 
-        DebugPoint();
+        if(!prod){
+            DebugPoint2();
+        }
 
     }
 
-    private pairPoint findMinNotUsed(IDictionary<pairPoint, float> dicoOfDistance)
+    /*private pairPoint findMinNotUsed(IDictionary<pairPoint, float> dicoOfDistance)
     {
         bool notFound = true;
         pairPoint pFound = null;
@@ -275,40 +298,41 @@ public class SnappingManager : MonoBehaviour
 
         }
         return pFound;
-    }
+    }*/
 
-    bool isVertexAlreadyUsed(Vector3 v)
+    // bool isVertexAlreadyUsed(Vector3 v)
+    // {
+
+    //     bool isItIn = false;
+    //     foreach (KeyValuePair<pairPoint, float> kvp in pointsToMatch)
+    //     {
+    //         Vector3 v1  = kvp.Key.pointC1;
+    //         Vector3 v2 = kvp.Key.pointC2;
+    //         if (v1.Equals(v))
+    //         {
+    //             isItIn = true;
+    //         }
+    //         if (v2.Equals(v))
+    //         {
+    //             isItIn = true;
+    //         }
+    //     }
+
+    //     return isItIn;
+    // }
+
+    void getTransform(bool prod)
     {
 
-        bool isItIn = false;
-        foreach (KeyValuePair<pairPoint, float> kvp in pointsToMatch)
-        {
-            Vector3 v1  = kvp.Key.pointC1;
-            Vector3 v2 = kvp.Key.pointC2;
-            if (v1.Equals(v))
-            {
-                isItIn = true;
-            }
-            if (v2.Equals(v))
-            {
-                isItIn = true;
-            }
-        }
-
-        return isItIn;
-    }
-
-    void getTransform()
-    {
-
-        Vector3[] p1 = new Vector3[4];
-        Vector3[] p2 = new Vector3[4];
+        Vector3[] p1 = new Vector3[3];
+        Vector3[] p2 = new Vector3[3];
 
         int i = 0;
-        foreach (KeyValuePair<pairPoint, float> kvp in pointsToMatch)
+        //foreach (KeyValuePair<pairPoint, float> kvp in pointsToMatch)
+        foreach (pairPoint kvp in pointsToMatchList)
         {
-            p1[i] = kvp.Key.pointC1;
-            p2[i] = kvp.Key.pointC2;
+            p1[i] = kvp.pointC1;
+            p2[i] = kvp.pointC2;
             i++;
         }
 
@@ -346,11 +370,17 @@ public class SnappingManager : MonoBehaviour
 
         //project1.transform.Translate(translation, Space.World);
         //project1.transform.rotation = rotation * project1.transform.rotation;
-
-
+        int id0 = 0;
+        int id1 = 1;
+        if(Vector3.Distance(p1[0], p1[1]) > Vector3.Distance(p1[1], p1[2])){
+            id0 = 1;
+            id1 = 2;
+        }
         
-        Vector3 p2p11 = p1[0] + (p1[1] - p1[0]) / 2;
-        showPoint(p2p11);
+        Vector3 p2p11 = p1[id0] + (p1[id1] - p1[id0]) / 2;
+        if(!prod){
+            showPoint(p2p11, "p2p11");
+        }
         var directInit = project1.transform.up;
         var direction = (p2p11 - project1.transform.position).normalized;
 
@@ -360,8 +390,10 @@ public class SnappingManager : MonoBehaviour
         project1.transform.Rotate(0, 0, angleToRotate);
         project1t.transform.eulerAngles = new Vector3(project1t.transform.eulerAngles.x, project1t.transform.eulerAngles.y, project1.transform.eulerAngles.z);
 
-        Vector3 p2p12 = p2[0] + (p2[1] - p2[0]) / 2;
-        showPoint(p2p12);
+        Vector3 p2p12 = p2[id0] + (p2[id1] - p2[id0]) / 2;
+        if(!prod){
+            showPoint(p2p12, "p2p12");
+        }
         var directInit2 = project2.transform.up;
         var direction2 = (p2p12 - project2.transform.position).normalized;
 
@@ -377,27 +409,50 @@ public class SnappingManager : MonoBehaviour
         Quaternion rotation2 = project2t.transform.rotation * Quaternion.Inverse(project1t.transform.rotation);
 
         //project1.transform.rotation = Quaternion.FromToRotation(directInit, direction);
+        if(prod){
+            cube1.transform.Translate(translation, Space.World);
+            cube1.transform.rotation = rotation2 * cube1.transform.rotation;
 
-        cube1.transform.Translate(translation, Space.World);
-        cube1.transform.rotation = rotation2 * cube1.transform.rotation;
+            Destroy(project1);
+            Destroy(project1t);
+            Destroy(project2);
+            Destroy(project2t);
+        }
 
-        // Destroy(project1);
-        // Destroy(project1t);
-        // Destroy(project2);
-        // Destroy(project2t);
+
         //cube1.transform.Rotate(rotation2);
 
     }
 
-    void showPoint(Vector3 v3)
+    void showPoint(Vector3 v3, string name)
     {
         GameObject sphere1 = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         sphere1.transform.position = v3;
         sphere1.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
         sphere1.transform.LookAt(cube1.transform.position);
+        sphere1.name = name;
         //sphere1.transform.Rotate(sphere1.transform.up, 180);
     }
 
+
+    void showLine(Vector3 v1, Vector3 v2, Color m, string name){
+        GameObject lineR = new GameObject(name);
+        LineRenderer lineRenderer = lineR.AddComponent<LineRenderer>();
+        lineRenderer.widthMultiplier = 0.2f;
+        lineRenderer.positionCount = 2;
+        lineRenderer.SetPosition(0, v1);
+        lineRenderer.SetPosition(1, v2);
+        
+        
+        // Create a new material with a shader that supports color (e.g., Sprites/Default)
+        Material lineMaterial = new Material(Shader.Find("Sprites/Default"));
+        lineRenderer.material = lineMaterial;
+
+        // Set the color
+        lineRenderer.startColor = m; // Set your desired start color
+        lineRenderer.endColor = m;   // Set your desired end color
+
+    }
     void DebugPoint()
     {
         foreach (KeyValuePair<pairPoint, float> kvp in pointsToMatch)
@@ -414,29 +469,60 @@ public class SnappingManager : MonoBehaviour
             sphere2.transform.position = kvp.Key.pointC2;
             sphere2.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
             sphere2.GetComponent<Renderer>().material.SetColor("_Color", kvp.Key.c);
+
+            showLine(kvp.Key.pointC1, kvp.Key.pointC2, kvp.Key.c, "LineTest");
         }
     }
-
-    pairPoint getMinInDict(IDictionary<pairPoint, float> theDict)
+    void DebugPoint2()
     {
-        pairPoint pFound = null;
-        float distToBeat = 10000;
-        foreach (KeyValuePair<pairPoint, float> kvp in theDict)
-        {
-            if(kvp.Value < distToBeat)
-            {
-                pFound = kvp.Key;
-                distToBeat = kvp.Value;
-            }
-        }
-        if (pFound == null)
-        {
-            throw new Exception("All hell breaks loose");
-            
-        }
-        return pFound;
+        // Initialize the array with 3 elements
+        Color[] colors = new Color[3];
 
+        // Assign colors to the array
+        colors[0] = Color.red;
+        colors[1] = Color.green;
+        colors[2] = Color.blue;
+        int count = 0;
+        
+        foreach (pairPoint kvp in pointsToMatchList)
+        {
+            //Material material = new Material();
+            kvp.c = colors[count];
+
+            GameObject sphere1 = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            sphere1.transform.position = kvp.pointC1;
+            sphere1.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
+            sphere1.GetComponent<Renderer>().material.SetColor("_Color", kvp.c);
+
+            GameObject sphere2 = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            sphere2.transform.position = kvp.pointC2;
+            sphere2.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
+            sphere2.GetComponent<Renderer>().material.SetColor("_Color", kvp.c);
+
+            showLine(kvp.pointC1, kvp.pointC2, kvp.c, "LineTest");
+            count ++;
+        }
     }
+    // pairPoint getMinInDict(IDictionary<pairPoint, float> theDict)
+    // {
+    //     pairPoint pFound = null;
+    //     float distToBeat = 10000;
+    //     foreach (KeyValuePair<pairPoint, float> kvp in theDict)
+    //     {
+    //         if(kvp.Value < distToBeat)
+    //         {
+    //             pFound = kvp.Key;
+    //             distToBeat = kvp.Value;
+    //         }
+    //     }
+    //     if (pFound == null)
+    //     {
+    //         throw new Exception("All hell breaks loose");
+            
+    //     }
+    //     return pFound;
+
+    // }
 
     public static Vector3[] GetUniqueVertices(Mesh mesh)
     {
@@ -449,6 +535,127 @@ public class SnappingManager : MonoBehaviour
         // Convert the HashSet back to an array and return
         return new List<Vector3>(uniqueVertices).ToArray();
     }
+
+
+
+
+//Optimising the sum of distance between points
+
+    bool IsUniqueCombination(List<pairPoint> combo, int count1, int count2)
+    {
+        var set1 = new HashSet<Vector3>();
+        var set2 = new HashSet<Vector3>();
+
+        foreach (var pair in combo)
+        {
+            set1.Add(pair.pointC1);
+            set2.Add(pair.pointC2);
+        }
+
+        return set1.Count == combo.Count && set2.Count == combo.Count;
+    }
+
+    List<List<pairPoint>> GetCombinations(List<pairPoint> pairs, int count1, int count2)
+    {
+        var results = new List<List<pairPoint>>();
+
+        for (int i = 0; i < pairs.Count; i++)
+        {
+            for (int j = i + 1; j < pairs.Count; j++)
+            {
+                for (int k = j + 1; k < pairs.Count; k++)
+                {
+                    var combo = new List<pairPoint> { pairs[i], pairs[j], pairs[k] };
+
+                    if (IsUniqueCombination(combo, count1, count2) && IsValidSolution(combo))
+                    {
+                        results.Add(combo);
+                    }
+                }
+            }
+        }
+
+        return results;
+    }
+    List<pairPoint> FindOptimalPairs(List<pairPoint> pairs, int count1, int count2)
+    {
+        List<pairPoint> optimalPairs = null;
+        float minSumDistance = float.MaxValue;
+
+        var combinations = GetCombinations(pairs, count1, count2);
+
+        foreach (var combo in combinations)
+        {
+            if (combo.Count == 3)
+            {
+                float sumDistance = combo.Sum(p => p.distance);
+
+                if (sumDistance < minSumDistance)
+                {
+                    minSumDistance = sumDistance;
+                    optimalPairs = combo;
+                }
+            }
+        }
+
+        return optimalPairs;
+    } 
+
+
+    bool IsValidSolution(List<pairPoint> pairs, float tolerance = 0.01f)
+    {
+        if (pairs.Count != 3)
+        {
+            return false;
+        }
+
+        Vector3 p1 = pairs[0].pointC1;
+        Vector3 p2 = pairs[1].pointC1;
+        Vector3 p3 = pairs[2].pointC1;
+
+        Vector3 q1 = pairs[0].pointC2;
+        Vector3 q2 = pairs[1].pointC2;
+        Vector3 q3 = pairs[2].pointC2;
+
+        // Form vectors for Cube 1
+        Vector3 V1 = p2 - p1;
+        Vector3 V2 = p3 - p1;
+        Vector3 V3 = p3 - p2;
+
+        // Form vectors for Cube 2
+        Vector3 U1 = q2 - q1;
+        Vector3 U2 = q3 - q1;
+        Vector3 U3 = q3 - q2;
+
+        // Compute angles for Cube 1
+        float angle1C1 = Vector3.Angle(V1, V2);
+        float angle2C1 = Vector3.Angle(V1, V3);
+        float angle3C1 = Vector3.Angle(V2, V3);
+
+        // Compute angles for Cube 2
+        float angle1C2 = Vector3.Angle(U1, U2);
+        float angle2C2 = Vector3.Angle(U1, U3);
+        float angle3C2 = Vector3.Angle(U2, U3);
+
+        Vector3 crossV1V2 = Vector3.Cross(V1, V2);
+        Vector3 crossU1U2 = Vector3.Cross(U1, U2);
+
+        if (Vector3.Dot(crossV1V2, crossU1U2) < 0)
+        {
+            return false; // The points are not in the same order on Cube 1
+        }
+
+        // Compare angles with a tolerance
+        if (Mathf.Abs(angle1C1 - angle1C2) < tolerance &&
+            Mathf.Abs(angle2C1 - angle2C2) < tolerance &&
+            Mathf.Abs(angle3C1 - angle3C2) < tolerance)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
 }
 
 // Previous function that does not work
