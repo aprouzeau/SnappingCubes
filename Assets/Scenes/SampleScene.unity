@@ -445,11 +445,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cube1: {fileID: 2072532857}
   cube2: {fileID: 830049409}
-  TotalTrial: 10
-  Cube1Pos: 3.31, 1.05, 2.18
-  Cube1Rot: 299.00, 115.16, 333.00
-  Cube2Pos: 7.76, 7.85, 0.52
-  Cube2Rot: 35.17, 98.78, 336.57
+  TotalTrial: 100
+  Cube1Pos: 7.54, 1.89, 5.40
+  Cube1Rot: 354.14, 265.90, 70.14
+  Cube2Pos: 6.54, 0.78, 5.72
+  Cube2Rot: 338.18, 129.84, 129.54
+  prodCode: 0
 --- !u!4 &1083434379
 Transform:
   m_ObjectHideFlags: 0
